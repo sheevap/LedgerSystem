@@ -1,7 +1,8 @@
 package org.example;
 
-import java.io.FileWriter;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,8 @@ public class Main {
                 case "2":
                     registerUser();
                     break;
+                case "3":
+                    
                 default:
                     System.out.println("Invalid choice.\n");
             }
@@ -141,6 +144,8 @@ public class Main {
                             default -> System.out.println("Invalid.");
                         }
                     }
+                    case 4 -> savings();
+                    case 5 -> creditLoan();
                     case 6 -> depositInterestPredictor();
                     case 7 -> {
                         System.out.println("Logging out...");
@@ -173,14 +178,15 @@ public class Main {
             return;
         }
 
-        if (amount > balance) {
+        if (amount > DatabaseHandler.balance) {
             System.out.println("Insufficient balance for this debit.");
             return;
         }
 
         balance -= amount;
-        db.saveTransaction("Debit", amount, desc, currentUserEmail);
-        System.out.println("Debit successfully recorded! Current balance: " + balance);
+        DatabaseHandler.balance -= amount;
+        System.out.println("Debit successfully recorded! Current balance: " + DatabaseHandler.balance);
+
     }
 
     public static void handleCredit(Scanner input) {
@@ -195,10 +201,91 @@ public class Main {
             System.out.println("Invalid input.");
             return;
         }
+        DatabaseHandler.balance += amount;
+        System.out.println("Credit successfully recorded! Current balance: " + DatabaseHandler.balance);
+    }
 
-        balance += amount;
-        db.saveTransaction("Credit", amount, desc, currentUserEmail);
-        System.out.println("Credit successfully recorded! Current balance: " + balance);
+    public static void savings() {
+        System.out.println("\n== Savings ==");
+
+        System.out.print("Are you sure you want to activate it? (Y/N) : ");
+        String answer = scanner.nextLine().trim().toUpperCase();
+
+        if (!answer.equals("Y")) {
+            System.out.println("Savings activation cancelled.");
+            return;
+        }
+
+        System.out.print("Please enter the percentage you wish to deduct from the next debit: ");
+        String percInput = scanner.nextLine().trim();
+
+        double percentage;
+        try {
+            percentage = Double.parseDouble(percInput);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a valid number.");
+            return;
+        }
+
+        if (percentage <= 0 || percentage >= 100) {
+            System.out.println("Please enter a valid percentage between 0 and 100.");
+            return;
+        }
+
+        // Call the DatabaseHandler's method that does insert/update
+        db.activateSavings(currentUserEmail, percentage);
+    }
+
+    public static void creditLoan() {
+    System.out.println("\n== Credit Loan ==");
+    System.out.println("1. Apply for Loan");
+    System.out.println("2. Make Loan Payment");
+    System.out.print("> ");
+    int choice = scanner.nextInt();
+    scanner.nextLine(); // consume newline
+
+    switch (choice) {
+        case 1 -> applyForLoan();
+        case 2 -> makeLoanPayment();
+        default -> System.out.println("Invalid choice.");
+    }
+}
+
+    private static void applyForLoan() {
+        System.out.println("\n== Apply for Loan ==");
+        
+        // Get user ID first
+        int userId = db.getUserId(currentUserEmail);
+        if (userId == -1) {
+            System.out.println("Error: Could not find user ID");
+            return;
+        }
+
+        System.out.print("Enter principal amount: ");
+        double principal = scanner.nextDouble();
+        scanner.nextLine();
+
+        System.out.print("Enter interest rate (e.g. 0.05 for 5%): ");
+        double interestRate = scanner.nextDouble();
+        scanner.nextLine();
+
+        System.out.print("Enter repayment period in months: ");
+        int period = scanner.nextInt();
+        scanner.nextLine();
+
+        db.applyLoan(scanner, userId); // Now passing correct parameter types
+    }
+
+    private static void makeLoanPayment() {
+        // Get user ID from email
+        int userId = db.getUserId(currentUserEmail);
+        if (userId == -1) {
+            System.out.println("Error: User not found.");
+            return;
+        }
+
+        System.out.println("\n== Make Loan Payment ==");
+        db.repayLoan(scanner, userId);
     }
 
     public static void depositInterestPredictor() {
