@@ -455,4 +455,9 @@ public class Main {
             e.printStackTrace();
         }
     }
+
+    private static void payLoan() {
+        System.out.println("== Repay Loan ==");
+        db.repayLoan(scanner, currentUserEmail);
+    }
 }
